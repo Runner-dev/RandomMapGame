@@ -19,8 +19,6 @@ int main(void)
     const int screenWidth = 1600;
     const int screenHeight = 900;
 
-    bool runcamera = true;
-
     int x = rand() % 100000;
 
     InitWindow(screenWidth, screenHeight, "raylib [models] example - heightmap loading and drawing");
@@ -75,25 +73,17 @@ int main(void)
             UnloadImage(image);
 
             model.materials[0].maps[MAP_DIFFUSE].texture = texture;
-        } // Load model from generated mesh
+        }
 
-        if(IsKeyPressed(KEY_C)) runcamera = !runcamera;
-
-        if (!runcamera)
-        {
-            if (IsKeyDown(KEY_LEFT_CONTROL))
+        UpdateCamera(&camera);
+        if (IsKeyDown(KEY_LEFT_CONTROL))
             {
-                camera.position.y -= 1.0f;
+                mapPosition.y += 0.1f;
             }
             if (IsKeyDown(KEY_LEFT_SHIFT))
             {
-                camera.position.y += 1.0f;
+                mapPosition.y -= 0.1f;
             }
-        }
-        else
-        {
-            UpdateCamera(&camera);
-        }
 
         
 
@@ -109,7 +99,7 @@ int main(void)
 
         DrawModel(model, mapPosition, 1.0f, RED);
 
-        DrawGrid(20, 1.0f);
+        // DrawGrid(20, 1.0f);
 
         EndMode3D();
 
