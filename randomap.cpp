@@ -11,6 +11,7 @@
 
 #include "raylib.h"
 #include "random"
+#include "iostream"
 
 int main(void)
 {
@@ -57,6 +58,9 @@ int main(void)
     // Main game loop
     while (!WindowShouldClose() && IsKeyUp(KEY_L)) // Detect window close button or ESC key
     {
+        int vertexCount = mesh.vertexCount;
+
+        std::cout << mesh.vertices[1500] << std::endl;
         // Update
         //----------------------------------------------------------------------------------
         // Update camera
