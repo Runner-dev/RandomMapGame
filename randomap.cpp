@@ -11,7 +11,54 @@
 
 #include "raylib.h"
 #include "random"
+#include "string"
 #include "iostream"
+
+using namespace std;
+
+float BilinearInterpolation(float q11, float q12, float q21, float q22, float x1, float x2, float y1, float y2, float x, float y)
+{
+    float x2x1, y2y1, x2x, y2y, yy1, xx1;
+    x2x1 = x2 - x1;
+    y2y1 = y2 - y1;
+    x2x = x2 - x;
+    y2y = y2 - y;
+    yy1 = y - y1;
+    xx1 = x - x1;
+    cout << "" << (q11 * x2x * y2y + q21 * xx1 * y2y + q12 * x2x * yy1 + q22 * xx1 * yy1) << endl;
+    return (
+               q11 * x2x * y2y +
+               q21 * xx1 * y2y +
+               q12 * x2x * yy1 +
+               q22 * xx1 * yy1) /
+           (x2x1 * y2y1);
+}
+
+float interpolatePosition(Vector3 position, unsigned char *data)
+{
+    float textureX = (position.x + 8) / 16 * 128;
+    float textureY = (position.z + 8) / 16 * 128;
+    int minX = floor(textureX);
+    int maxX = ceil(textureX);
+    int minY = floor(textureY);
+    int maxY = ceil(textureY);
+
+    // cout << "Int: " << (int)data[(minY * 128 + minX) * 4] << endl;
+    // cout << "Int: " << position.x << endl;
+    // cout << "Int: " << minX << endl;
+    // cout << "Int: " << maxX << endl;
+
+    return(BilinearInterpolation(
+                (float)(int)data[(minY * 128 + minX) * 4],
+                (float)(int)data[(minY * 128 + maxX) * 4],
+                (float)(int)data[(maxY * 128 + minX) * 4],
+                (float)(int)data[(maxY * 128 + maxX) * 4],
+                (float)minX,
+                (float)maxX,
+                (float)minY,
+                (float)maxY,
+                position.x, position.y));
+};
 
 int main(void)
 {
@@ -46,21 +93,21 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     Image image = GenImagePerlinNoise(128, 128, x, rand() % 100000, 1); // Load heightmap image (RAM)
-    Texture2D texture = LoadTextureFromImage(image);                    // Convert image to texture (VRAM)
+    Texture2D texture = LoadTextureFromImage(image);
+    unsigned char *data = (unsigned char *)image.data;
 
     Mesh mesh = GenMeshHeightmap(image, (Vector3){16, 8, 16}); // Generate heightmap mesh (RAM and VRAM)
     Model model = LoadModelFromMesh(mesh);
 
-    UnloadImage(image);
+    // UnloadImage(image);
 
     model.materials[0].maps[MAP_DIFFUSE].texture = texture;
 
     // Main game loop
     while (!WindowShouldClose() && IsKeyUp(KEY_L)) // Detect window close button or ESC key
     {
+        // Convert image to texture (VRAM)
         int vertexCount = mesh.vertexCount;
-
-        std::cout << mesh.vertices[1500] << std::endl;
         // Update
         //----------------------------------------------------------------------------------
         // Update camera
@@ -80,16 +127,17 @@ int main(void)
         }
 
         UpdateCamera(&camera);
-        if (IsKeyDown(KEY_LEFT_CONTROL))
-            {
-                mapPosition.y += 0.1f;
-            }
-            if (IsKeyDown(KEY_LEFT_SHIFT))
-            {
-                mapPosition.y -= 0.1f;
-            }
-
         
+        mapPosition.y = -2 + interpolatePosition(camera.position, data)/100;
+
+        if (IsKeyDown(KEY_LEFT_CONTROL))
+        {
+            mapPosition.y += 0.1f;
+        }
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+        {
+            mapPosition.y -= 0.1f;
+        }
 
         //----------------------------------------------------------------------------------
 
