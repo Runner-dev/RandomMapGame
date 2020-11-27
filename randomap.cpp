@@ -16,22 +16,13 @@
 
 using namespace std;
 
-float BilinearInterpolation(float q11, float q12, float q21, float q22, float x1, float x2, float y1, float y2, float x, float y)
+float bilinear_interpolation(int x, int y, int points[4][3])
 {
-    float x2x1, y2y1, x2x, y2y, yy1, xx1;
-    x2x1 = x2 - x1;
-    y2y1 = y2 - y1;
-    x2x = x2 - x;
-    y2y = y2 - y;
-    yy1 = y - y1;
-    xx1 = x - x1;
-    cout << "" << (q11 * x2x * y2y + q21 * xx1 * y2y + q12 * x2x * yy1 + q22 * xx1 * yy1) << endl;
-    return (
-               q11 * x2x * y2y +
-               q21 * xx1 * y2y +
-               q12 * x2x * yy1 +
-               q22 * xx1 * yy1) /
-           (x2x1 * y2y1);
+    return (points[0][2] * (points[2][0] - x) * (points[1][1] - y) +
+            points[2][2] * (x - points[0][0]) * (points[1][1] - y) +
+            points[1][2] * (points[2][0] - x) * (y - points[0][1]) +
+            points[3][2] * (x - points[0][0]) * (y - points[0][1])) /
+           ((points[2][0] - points[0][0]) * (points[1][1] - points[0][1]) + 0.0);
 }
 
 float interpolatePosition(Vector3 position, unsigned char *data)
@@ -43,21 +34,13 @@ float interpolatePosition(Vector3 position, unsigned char *data)
     int minY = floor(textureY);
     int maxY = ceil(textureY);
 
-    // cout << "Int: " << (int)data[(minY * 128 + minX) * 4] << endl;
-    // cout << "Int: " << position.x << endl;
-    // cout << "Int: " << minX << endl;
-    // cout << "Int: " << maxX << endl;
+    int points[4][3] = {
+        {minX, minY, (int)data[(minY * 128 + minX) * 4]},
+        {minX, maxY, (int)data[(maxY * 128 + minX) * 4]},
+        {maxX, minY, (int)data[(minY * 128 + maxX) * 4]},
+        {maxX, maxY, (int)data[(maxY * 128 + maxX) * 4]}};
 
-    return(BilinearInterpolation(
-                (float)(int)data[(minY * 128 + minX) * 4],
-                (float)(int)data[(minY * 128 + maxX) * 4],
-                (float)(int)data[(maxY * 128 + minX) * 4],
-                (float)(int)data[(maxY * 128 + maxX) * 4],
-                (float)minX,
-                (float)maxX,
-                (float)minY,
-                (float)maxY,
-                position.x, position.y));
+    return (bilinear_interpolation(textureX, textureY, points));
 };
 
 int main(void)
@@ -103,11 +86,11 @@ int main(void)
 
     model.materials[0].maps[MAP_DIFFUSE].texture = texture;
 
+    float lastI = 0;
+
     // Main game loop
     while (!WindowShouldClose() && IsKeyUp(KEY_L)) // Detect window close button or ESC key
     {
-        // Convert image to texture (VRAM)
-        int vertexCount = mesh.vertexCount;
         // Update
         //----------------------------------------------------------------------------------
         // Update camera
@@ -116,19 +99,27 @@ int main(void)
         {
             x += 1;
 
+            UnloadImage(image);
+
             image = GenImagePerlinNoise(128, 128, x, rand() % 100000, 1); // Load heightmap image (RAM)
             texture = LoadTextureFromImage(image);                        // Convert image to texture (VRAM)
 
+            data = (unsigned char *)image.data;
+
             mesh = GenMeshHeightmap(image, (Vector3){16, 8, 16}); // Generate heightmap mesh (RAM and VRAM)
             model = LoadModelFromMesh(mesh);
-            UnloadImage(image);
 
             model.materials[0].maps[MAP_DIFFUSE].texture = texture;
         }
 
         UpdateCamera(&camera);
-        
-        mapPosition.y = -2 + interpolatePosition(camera.position, data)/100;
+
+        if (interpolatePosition(camera.position, data) != lastI)
+        {
+            lastI = interpolatePosition(camera.position, data);
+            cout << interpolatePosition(camera.position, data) << endl;
+        }
+        mapPosition.y = -0.5 - interpolatePosition(camera.position, data) / 50;
 
         if (IsKeyDown(KEY_LEFT_CONTROL))
         {
