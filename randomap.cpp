@@ -88,6 +88,10 @@ int main(void)
 
     float lastI = 0;
 
+    Vector3 ballPos = {(rand() % 800) / 100.0, 0, (rand() % 800) / 100.0};
+
+    bool showBall = false;
+
     // Main game loop
     while (!WindowShouldClose() && IsKeyUp(KEY_L)) // Detect window close button or ESC key
     {
@@ -110,6 +114,14 @@ int main(void)
             model = LoadModelFromMesh(mesh);
 
             model.materials[0].maps[MAP_DIFFUSE].texture = texture;
+            ballPos = {(rand() % 700) / 100.0 + 0.5,
+                       0,
+                       (rand() % 700) / 100.0 + 0.5};
+            showBall = false;
+        }
+
+        if(IsKeyPressed(KEY_H)) {
+            showBall = !showBall;
         }
 
         UpdateCamera(&camera);
@@ -117,9 +129,26 @@ int main(void)
         if (interpolatePosition(camera.position, data) != lastI)
         {
             lastI = interpolatePosition(camera.position, data);
-            cout << interpolatePosition(camera.position, data) << endl;
         }
         mapPosition.y = -0.5 - interpolatePosition(camera.position, data) / 50;
+        if (isnan(interpolatePosition(camera.position, data)))
+        {
+            mapPosition.y = interpolatePosition({0.1, 0, 0.1}, data);
+            if(showBall) {
+            ballPos.y = 2 - interpolatePosition({0.1, 0, 0.1}, data) / 50 + interpolatePosition(ballPos, data) / 50;
+            } else {
+            ballPos.y = 1.2 - interpolatePosition({0.1, 0, 0.1}, data) / 50 + interpolatePosition(ballPos, data) / 50;
+            }
+        }
+        else
+        {
+            mapPosition.y = -0.5 - interpolatePosition(camera.position, data) / 50;
+            if(showBall) {
+            ballPos.y = 2 - interpolatePosition(camera.position, data) / 50 + interpolatePosition(ballPos, data) / 50;
+            } else {
+            ballPos.y = 1.2 - interpolatePosition(camera.position, data) / 50 + interpolatePosition(ballPos, data) / 50;
+            }
+        }
 
         if (IsKeyDown(KEY_LEFT_CONTROL))
         {
@@ -142,7 +171,7 @@ int main(void)
 
         DrawModel(model, mapPosition, 1.0f, RED);
 
-        // DrawGrid(20, 1.0f);
+        DrawSphere(ballPos, 0.2, DARKGRAY);
 
         EndMode3D();
 
